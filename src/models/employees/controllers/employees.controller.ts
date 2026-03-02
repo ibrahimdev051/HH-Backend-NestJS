@@ -64,10 +64,11 @@ export class EmployeesController {
       ipAddress,
       userAgent,
     );
-    return SuccessHelper.createSuccessResponse(
-      result,
-      'Employee created. An email with temporary password has been sent.',
-    );
+    const message =
+      dto.authMethod === 'GOOGLE_SIGNIN'
+        ? 'Employee created. An email with Google sign-in instructions has been sent.'
+        : 'Employee created. An email with temporary password has been sent.';
+    return SuccessHelper.createSuccessResponse(result, message);
   }
 
   @Post()

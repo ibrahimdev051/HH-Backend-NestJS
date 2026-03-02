@@ -104,4 +104,14 @@ export class CreateEmployeeByEmailDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  /**
+   * How the employee will sign in.
+   * - TEMP_PASSWORD: Send email with temporary password (default).
+   * - GOOGLE_SIGNIN: Send email instructing to sign in with Google.
+   */
+  @IsOptional()
+  @IsString()
+  @IsIn(['TEMP_PASSWORD', 'GOOGLE_SIGNIN'])
+  authMethod?: 'TEMP_PASSWORD' | 'GOOGLE_SIGNIN';
 }
