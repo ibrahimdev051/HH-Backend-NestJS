@@ -1068,6 +1068,68 @@ export class AuthService {
   }
 
   /**
+   * Create a user for Google sign-in only (no password).
+   * Used when organization creates employee with authMethod: GOOGLE_SIGNIN.
+   */
+  async createUserForGoogleSignIn(dto: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  }): Promise<User> {
+    const existingUser = await this.userRepository.findByEmail(dto.email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const employeeRole = await this.roleRepository.findByName('EMPLOYEE');
+    if (!employeeRole) {
+      throw new NotFoundException('EMPLOYEE role not found. Ensure roles are seeded.');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = this.userRepository.create({
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        email: dto.email,
+        password: null,
+        temporary_password: null,
+        temporary_password_expires_at: null,
+        must_change_password: false,
+        email_verified: true,
+        is_active: true,
+      });
+
+      const savedUser = await queryRunner.manager.save(User, user);
+
+      const userRole = queryRunner.manager.create(UserRole, {
+        user_id: savedUser.id,
+        role_id: employeeRole.id,
+      });
+      await queryRunner.manager.save(UserRole, userRole);
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(
+        `User created for Google sign-in: ${this.maskEmail(dto.email)} (for employee)`,
+      );
+
+      return savedUser;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `Failed to create user for Google sign-in: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
    * Get all users with their roles (paginated)
    * Excludes the current admin user
    */

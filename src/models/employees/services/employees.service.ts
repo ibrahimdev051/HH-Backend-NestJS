@@ -247,11 +247,24 @@ export class EmployeesService {
       throw new ConflictException('User with this email already exists. Use add-by-user-id flow.');
     }
 
-    const { user, temporaryPassword } = await this.authService.createUserWithTemporaryPasswordForEmployee({
-      email: dto.email,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-    });
+    let user: User;
+    let temporaryPassword: string | undefined;
+
+    if (dto.authMethod === 'GOOGLE_SIGNIN') {
+      user = await this.authService.createUserForGoogleSignIn({
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+      });
+    } else {
+      const result = await this.authService.createUserWithTemporaryPasswordForEmployee({
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+      });
+      user = result.user;
+      temporaryPassword = result.temporaryPassword;
+    }
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -313,14 +326,23 @@ export class EmployeesService {
       const loginUrl = this.configService.get<string>('HOME_HEALTH_AI_URL') ?? '';
       const loginUrlPath = loginUrl ? `${loginUrl.replace(/\/$/, '')}/login` : '/login';
       try {
-        await this.emailService.sendOrganizationStaffCreatedEmail(
-          dto.email,
-          fullName,
-          dto.email,
-          temporaryPassword,
-          loginUrlPath,
-          TEMPORARY_PASSWORD_EXPIRES_HOURS,
-        );
+        if (dto.authMethod === 'GOOGLE_SIGNIN') {
+          await this.emailService.sendGoogleSignInInviteEmail(
+            dto.email,
+            fullName,
+            loginUrlPath,
+            organization.organization_name ?? 'your organization',
+          );
+        } else {
+          await this.emailService.sendOrganizationStaffCreatedEmail(
+            dto.email,
+            fullName,
+            dto.email,
+            temporaryPassword!,
+            loginUrlPath,
+            TEMPORARY_PASSWORD_EXPIRES_HOURS,
+          );
+        }
       } catch (emailError) {
         this.logger.error('Failed to send employee created email', emailError);
       }
