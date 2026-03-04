@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, IsNull } from 'typeorm';
 import { Organization } from '../../entities/organization.entity';
 import { RequirementTag } from '../entities/requirement-tag.entity';
 import { RequirementDocumentType } from '../entities/requirement-document-type.entity';
@@ -147,7 +147,11 @@ export class RequirementTagService {
     const documentTypeIds = dto.document_type_ids ?? [];
     if (documentTypeIds.length > 0) {
       const docTypes = await this.hrDocumentTypeRepository.find({
-        where: { id: In(documentTypeIds), organization_id: organizationId },
+        where: {
+          id: In(documentTypeIds),
+          organization_id: organizationId,
+          employee_id: IsNull(),
+        },
         select: ['id'],
       });
       if (docTypes.length !== documentTypeIds.length) {
@@ -201,7 +205,11 @@ export class RequirementTagService {
       const documentTypeIds = dto.document_type_ids;
       if (documentTypeIds.length > 0) {
         const docTypes = await this.hrDocumentTypeRepository.find({
-          where: { id: In(documentTypeIds), organization_id: organizationId },
+          where: {
+            id: In(documentTypeIds),
+            organization_id: organizationId,
+            employee_id: IsNull(),
+          },
           select: ['id'],
         });
         if (docTypes.length !== documentTypeIds.length) {

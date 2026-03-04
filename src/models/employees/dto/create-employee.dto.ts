@@ -6,6 +6,7 @@ import {
   IsDateString,
   MaxLength,
   IsIn,
+  IsArray,
 } from 'class-validator';
 
 export class CreateEmployeeDto {
@@ -44,4 +45,9 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsUUID()
   provider_role_id?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  requirement_tag_ids?: string[];
 }

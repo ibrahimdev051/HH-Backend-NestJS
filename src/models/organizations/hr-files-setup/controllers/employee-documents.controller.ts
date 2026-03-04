@@ -48,6 +48,22 @@ export class EmployeeDocumentsController {
     return SuccessHelper.createSuccessResponse(data);
   }
 
+  @Get('document-types-by-tags')
+  @HttpCode(HttpStatus.OK)
+  async getDocumentTypesByEmployeeTags(
+    @Param('organizationId') organizationId: string,
+    @Param('employeeId') employeeId: string,
+    @LoggedInUser() user: UserWithRolesInterface,
+  ) {
+    const data =
+      await this.employeeDocumentsService.getDocumentTypesByEmployeeTags(
+        organizationId,
+        employeeId,
+        user.userId,
+      );
+    return SuccessHelper.createSuccessResponse(data);
+  }
+
   @Post('expiration-status')
   @HttpCode(HttpStatus.OK)
   async getExpirationStatus(

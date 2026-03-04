@@ -11,6 +11,7 @@ import {
   MaxLength,
   IsIn,
   IsObject,
+  IsArray,
 } from 'class-validator';
 
 export class CreateEmployeeByEmailDto {
@@ -114,4 +115,9 @@ export class CreateEmployeeByEmailDto {
   @IsString()
   @IsIn(['TEMP_PASSWORD', 'GOOGLE_SIGNIN'])
   authMethod?: 'TEMP_PASSWORD' | 'GOOGLE_SIGNIN';
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  requirement_tag_ids?: string[];
 }

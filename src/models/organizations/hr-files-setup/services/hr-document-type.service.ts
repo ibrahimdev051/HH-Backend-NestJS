@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Organization } from '../../entities/organization.entity';
 import { HrDocumentType } from '../entities/hr-document-type.entity';
 import { OrganizationRoleService } from '../../services/organization-role.service';
@@ -62,7 +62,8 @@ export class HrDocumentTypeService {
 
     const qb = this.hrDocumentTypeRepository
       .createQueryBuilder('hdt')
-      .where('hdt.organization_id = :organizationId', { organizationId });
+      .where('hdt.organization_id = :organizationId', { organizationId })
+      .andWhere('hdt.employee_id IS NULL');
 
     if (category !== undefined && category !== '') {
       qb.andWhere('hdt.category = :category', { category });
@@ -95,7 +96,7 @@ export class HrDocumentTypeService {
     await this.ensureAccess(organizationId, userId);
 
     const existing = await this.hrDocumentTypeRepository.findOne({
-      where: { organization_id: organizationId, code: dto.code },
+      where: { organization_id: organizationId, code: dto.code, employee_id: IsNull() },
     });
     if (existing) {
       throw new ConflictException(
@@ -126,7 +127,7 @@ export class HrDocumentTypeService {
     await this.ensureAccess(organizationId, userId);
 
     const entity = await this.hrDocumentTypeRepository.findOne({
-      where: { id, organization_id: organizationId },
+      where: { id, organization_id: organizationId, employee_id: IsNull() },
     });
     if (!entity) {
       throw new NotFoundException('HR document type not found');
@@ -146,7 +147,7 @@ export class HrDocumentTypeService {
     await this.ensureAccess(organizationId, userId);
 
     const entity = await this.hrDocumentTypeRepository.findOne({
-      where: { id, organization_id: organizationId },
+      where: { id, organization_id: organizationId, employee_id: IsNull() },
     });
     if (!entity) {
       throw new NotFoundException('HR document type not found');
@@ -164,7 +165,7 @@ export class HrDocumentTypeService {
     await this.ensureAccess(organizationId, userId);
 
     const entity = await this.hrDocumentTypeRepository.findOne({
-      where: { id, organization_id: organizationId },
+      where: { id, organization_id: organizationId, employee_id: IsNull() },
     });
     if (!entity) {
       throw new NotFoundException('HR document type not found');

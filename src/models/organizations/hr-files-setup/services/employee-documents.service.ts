@@ -7,12 +7,20 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, IsNull, type FindOptionsWhere, Repository } from 'typeorm';
+import {
+  DataSource,
+  In,
+  IsNull,
+  type FindOptionsWhere,
+  Repository,
+} from 'typeorm';
 import OpenAI from 'openai';
 import { extractText, getDocumentProxy } from 'unpdf';
 import { EmployeeDocument } from '../entities/employee-document.entity';
 import { DocumentChunk } from '../entities/document-chunk.entity';
 import { HrDocumentType } from '../entities/hr-document-type.entity';
+import { EmployeeRequirementTag } from '../entities/employee-requirement-tag.entity';
+import { RequirementDocumentType } from '../entities/requirement-document-type.entity';
 import { Employee } from '../../../employees/entities/employee.entity';
 import { Organization } from '../../entities/organization.entity';
 import { OrganizationRoleService } from '../../services/organization-role.service';
@@ -114,6 +122,10 @@ export class EmployeeDocumentsService {
     private readonly employeeRepository: Repository<Employee>,
     @InjectRepository(Organization)
     private readonly organizationRepository: Repository<Organization>,
+    @InjectRepository(EmployeeRequirementTag)
+    private readonly employeeRequirementTagRepository: Repository<EmployeeRequirementTag>,
+    @InjectRepository(RequirementDocumentType)
+    private readonly requirementDocumentTypeRepository: Repository<RequirementDocumentType>,
     private readonly organizationRoleService: OrganizationRoleService,
     private readonly embeddingService: EmbeddingService,
     private readonly storageService: EmployeeDocumentStorageService,
@@ -171,6 +183,71 @@ export class EmployeeDocumentsService {
       },
     });
 
+    const docByTypeId = new Map(documents.map((d) => [d.document_type_id, d]));
+
+    return docTypes.map((dt) => {
+      const d = docByTypeId.get(dt.id) ?? null;
+      return {
+        document_type: {
+          id: dt.id,
+          code: dt.code,
+          name: dt.name,
+          has_expiration: dt.has_expiration,
+          category: dt.category,
+          sort_order: dt.sort_order,
+        },
+        document: d
+          ? {
+              id: d.id,
+              file_name: d.file_name,
+              file_path: d.file_path,
+              file_size_bytes: d.file_size_bytes,
+              mime_type: d.mime_type,
+              extraction_status: d.extraction_status,
+              created_at: d.created_at,
+            }
+          : null,
+      };
+    });
+  }
+
+  async getDocumentTypesByEmployeeTags(
+    organizationId: string,
+    employeeId: string,
+    userId: string,
+  ): Promise<RequiredDocumentItem[]> {
+    await this.ensureDocumentAccess(organizationId, employeeId, userId);
+
+    const employeeTags = await this.employeeRequirementTagRepository.find({
+      where: { employee_id: employeeId },
+      select: ['requirement_tag_id'],
+    });
+    const tagIds = employeeTags.map((t) => t.requirement_tag_id);
+    if (tagIds.length === 0) return [];
+
+    const links = await this.requirementDocumentTypeRepository.find({
+      where: { requirement_tag_id: In(tagIds) },
+      select: ['document_type_id'],
+    });
+    const docTypeIds = [...new Set(links.map((l) => l.document_type_id))];
+    if (docTypeIds.length === 0) return [];
+
+    const docTypes = await this.hrDocumentTypeRepository.find({
+      where: {
+        id: In(docTypeIds),
+        organization_id: organizationId,
+        is_active: true,
+      },
+      order: { sort_order: 'ASC', id: 'ASC' },
+    });
+
+    const documents = await this.employeeDocumentRepository.find({
+      where: {
+        employee_id: employeeId,
+        organization_id: organizationId,
+        deleted_at: IsNull(),
+      },
+    });
     const docByTypeId = new Map(documents.map((d) => [d.document_type_id, d]));
 
     return docTypes.map((dt) => {
@@ -527,11 +604,20 @@ export class EmployeeDocumentsService {
     }
 
     const docType = await this.hrDocumentTypeRepository.findOne({
-      where: {
-        id: documentTypeId,
-        organization_id: organizationId,
-        is_active: true,
-      },
+      where: [
+        {
+          id: documentTypeId,
+          organization_id: organizationId,
+          is_active: true,
+          employee_id: IsNull(),
+        },
+        {
+          id: documentTypeId,
+          organization_id: IsNull(),
+          is_active: true,
+          employee_id: employeeId,
+        },
+      ],
     });
     if (!docType) {
       throw new NotFoundException('Document type not found');

@@ -239,8 +239,6 @@ export class EmployeesController {
     const ipAddress = this.getIpAddress(request);
     const userAgent = this.getUserAgent(request);
 
-    // Note: The invite endpoint should use organizationId from params, not id
-    // The id param here is not used, but kept for route consistency
     const result = await this.employeesService.invite(
       organizationId,
       inviteDto,
