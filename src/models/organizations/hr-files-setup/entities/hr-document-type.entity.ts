@@ -7,20 +7,23 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-  Unique,
 } from 'typeorm';
 import { Organization } from '../../entities/organization.entity';
+import { Employee } from '../../../employees/entities/employee.entity';
 
 @Entity('hr_document_types')
-@Unique(['organization_id', 'code'])
 @Index(['organization_id'])
 @Index(['organization_id', 'is_active'])
+@Index(['employee_id'])
 export class HrDocumentType {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid' })
-  organization_id: string;
+  @Column({ type: 'uuid', nullable: true })
+  organization_id: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  employee_id: string | null;
 
   @Column({ type: 'varchar', length: 20 })
   code: string;
@@ -49,7 +52,11 @@ export class HrDocumentType {
   @UpdateDateColumn({ type: 'timestamp with time zone', default: () => 'NOW()' })
   updated_at: Date;
 
-  @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Organization, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'organization_id' })
-  organization: Organization;
+  organization: Organization | null;
+
+  @ManyToOne(() => Employee, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'employee_id' })
+  employee: Employee | null;
 }

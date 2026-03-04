@@ -22,6 +22,7 @@ import { InviteEmployeeDto } from '../dto/invite-employee.dto';
 import { UpdateEmployeeProfileDto } from '../dto/update-employee-profile.dto';
 import { EmployeeSerializer } from '../serializers/employee.serializer';
 import { OrganizationRoleService } from '../../organizations/services/organization-role.service';
+import { EmployeeRequirementTagService } from '../../organizations/hr-files-setup/services/employee-requirement-tag.service';
 import { AuditLogService } from '../../../common/services/audit/audit-log.service';
 import { AuthService } from '../../../authentication/services/auth.service';
 import { EmailService } from '../../../common/services/email/email.service';
@@ -49,6 +50,7 @@ export class EmployeesService {
     private authService: AuthService,
     private emailService: EmailService,
     private configService: ConfigService,
+    private employeeRequirementTagService: EmployeeRequirementTagService,
   ) {}
 
   private async validateOrganizationAccess(
@@ -145,9 +147,14 @@ export class EmployeesService {
 
       const saved = await queryRunner.manager.save(Employee, employee);
 
-      await queryRunner.commitTransaction();
+      await this.employeeRequirementTagService.assignToEmployee(
+        saved.id,
+        organizationId,
+        createDto.requirement_tag_ids ?? [],
+        queryRunner.manager,
+      );
 
-      // HIPAA Compliance: Log operation
+      await queryRunner.commitTransaction();
       try {
         await this.auditLogService.log({
           userId,
@@ -299,6 +306,13 @@ export class EmployeesService {
         board_certifications: dto.board_certifications ?? null,
       });
       await queryRunner.manager.save(EmployeeProfile, profile);
+
+      await this.employeeRequirementTagService.assignToEmployee(
+        savedEmployee.id,
+        organizationId,
+        dto.requirement_tag_ids ?? [],
+        queryRunner.manager,
+      );
 
       await queryRunner.commitTransaction();
 

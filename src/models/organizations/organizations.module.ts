@@ -42,7 +42,9 @@ import { HrDocumentTypeService } from './hr-files-setup/services/hr-document-typ
 import { HrDocumentTypesController } from './hr-files-setup/controllers/hr-document-types.controller';
 import { RequirementTag } from './hr-files-setup/entities/requirement-tag.entity';
 import { RequirementDocumentType } from './hr-files-setup/entities/requirement-document-type.entity';
+import { EmployeeRequirementTag } from './hr-files-setup/entities/employee-requirement-tag.entity';
 import { RequirementTagService } from './hr-files-setup/services/requirement-tag.service';
+import { EmployeeRequirementTagService } from './hr-files-setup/services/employee-requirement-tag.service';
 import { RequirementTagsController } from './hr-files-setup/controllers/requirement-tags.controller';
 import { EmployeeDocument } from './hr-files-setup/entities/employee-document.entity';
 import { DocumentChunk } from './hr-files-setup/entities/document-chunk.entity';
@@ -51,7 +53,10 @@ import { EmployeeDocumentsService } from './hr-files-setup/services/employee-doc
 import { EmployeeDocumentsChatService } from './hr-files-setup/services/employee-documents-chat.service';
 import { EmployeeDocumentStorageService } from './hr-files-setup/services/employee-document-storage.service';
 import { EmployeeDocumentsController } from './hr-files-setup/controllers/employee-documents.controller';
+import { EmployeeDocumentTypesController } from './hr-files-setup/controllers/employee-document-types.controller';
+import { EmployeeDocumentTypeService } from './hr-files-setup/services/employee-document-type.service';
 import { EmployeeDocumentAccessGuard } from '../../common/guards/employee-document-access.guard';
+import { EmployeeDocumentTypeAccessGuard } from '../../common/guards/employee-document-type-access.guard';
 import { EmbeddingModule } from '../../common/services/embedding/embedding.module';
 import { OrganizationRepository } from './repositories/organization.repository';
 import { ReferralRepository } from './repositories/referral.repository';
@@ -75,6 +80,7 @@ import { ReferralMessagesGateway } from './gateways/referral-messages.gateway';
       HrDocumentType,
       RequirementTag,
       RequirementDocumentType,
+      EmployeeRequirementTag,
       EmployeeDocument,
       DocumentChunk,
       Employee,
@@ -102,6 +108,7 @@ import { ReferralMessagesGateway } from './gateways/referral-messages.gateway';
     HrDocumentTypesController,
     RequirementTagsController,
     EmployeeDocumentsController,
+    EmployeeDocumentTypesController,
   ],
   providers: [
     OrganizationsService,
@@ -112,11 +119,14 @@ import { ReferralMessagesGateway } from './gateways/referral-messages.gateway';
     ReferralDocumentStorageService,
     OrganizationStaffService,
     HrDocumentTypeService,
+    EmployeeDocumentTypeService,
     RequirementTagService,
+    EmployeeRequirementTagService,
     EmployeeDocumentsService,
     EmployeeDocumentsChatService,
     EmployeeDocumentStorageService,
     EmployeeDocumentAccessGuard,
+    EmployeeDocumentTypeAccessGuard,
     OrganizationRepository,
     ReferralRepository,
     OrganizationRoleGuard,
@@ -131,6 +141,7 @@ import { ReferralMessagesGateway } from './gateways/referral-messages.gateway';
     ReferralsService,
     OrganizationRoleGuard,
     EmployeeDocumentsService,
+    EmployeeRequirementTagService,
   ],
 })
 export class OrganizationsModule {}
