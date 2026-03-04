@@ -8,18 +8,23 @@ import { HttpExceptionFilter } from './common/exceptions/http-exception.filter';
 import { AuthService } from './authentication/services/auth.service';
 import { GoogleOAuthGuard } from './common/guards/google-oauth.guard';
 import { SocketIoAdapter } from './common/adapters/socket-io.adapter';
+import { JobManagementService } from './models/job-management/job-management.service';
+import { SuccessHelper } from './common/helpers/responses/success.helper';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({logger: false}));
 
   const httpPort = parseInt(process.env.PORT || '3000', 10);
-  const wsPort = parseInt(process.env.WS_PORT || String(httpPort + 1), 10);
+  // const wsPort = parseInt(process.env.WS_PORT || String(httpPort + 1), 10);
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ||
     (process.env.HOME_HEALTH_AI_URL ? [process.env.HOME_HEALTH_AI_URL] : []) ||
     (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []);
-  app.useWebSocketAdapter(new SocketIoAdapter(app, wsPort, allowedOrigins.length > 0 ? allowedOrigins : false));
+  app.useWebSocketAdapter(
+  new SocketIoAdapter(app, allowedOrigins.length > 0 ? allowedOrigins : false)
+);
 
   const appConfigService = app.get(AppConfigService);
+  const apiPrefix = appConfigService.apiPrefix;
 
   const fastifyInstance = app.getHttpAdapter().getInstance();
   await fastifyInstance.register(require('@fastify/multipart'), {
@@ -114,7 +119,7 @@ async function bootstrap() {
     }
   });
 
-  app.setGlobalPrefix(appConfigService.apiPrefix);
+  app.setGlobalPrefix(apiPrefix);
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -136,16 +141,95 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Fallback: register job-management list + create directly on Fastify so they always exist
+  const prefix = apiPrefix.replace(/^\//, '').replace(/\/$/, '');
+  const jobMgmtBase = `/${prefix}/job-management`;
+  try {
+    const jobService = app.get(JobManagementService);
+
+    fastifyInstance.get(`${jobMgmtBase}/organization/:organizationId/job-postings`, async (request: any, reply: any) => {
+      try {
+        const { organizationId } = request.params;
+        const { search, status, page, limit } = request.query || {};
+        const result = await jobService.findAllByOrganization(organizationId, {
+          search: search as string,
+          status: status as string,
+          page: page ? Number(page) : 1,
+          limit: limit ? Number(limit) : 20,
+        });
+        return reply.send(SuccessHelper.createPaginatedResponse(result.data, result.total, result.page, result.limit));
+      } catch (err: any) {
+        const status = err?.statusCode || err?.status || 500;
+        return reply.status(status).send({
+          message: err?.message || 'Internal server error',
+          error: err?.response?.message || err?.message,
+          statusCode: status,
+        });
+      }
+    });
+
+    fastifyInstance.post(`${jobMgmtBase}/organization/:organizationId/job-postings`, async (request: any, reply: any) => {
+      try {
+        const { organizationId } = request.params;
+        const body = request.body;
+        const result = await jobService.create(organizationId, body as any);
+        return reply.status(201).send(SuccessHelper.createSuccessResponse(result, 'Job posting created successfully'));
+      } catch (err: any) {
+        const status = err?.statusCode || err?.status || 500;
+        return reply.status(status).send({
+          message: err?.message || 'Validation failed',
+          error: err?.response?.message || err?.message,
+          statusCode: status,
+        });
+      }
+    });
+
+    fastifyInstance.patch(`${jobMgmtBase}/organization/:organizationId/job-postings/:id`, async (request: any, reply: any) => {
+      try {
+        const { organizationId, id } = request.params;
+        const body = (request.body || {}) as { status?: string };
+        const result = await jobService.update(organizationId, id, body);
+        return reply.send(SuccessHelper.createSuccessResponse(result, 'Job posting updated'));
+      } catch (err: any) {
+        const status = err?.statusCode || err?.status || 500;
+        return reply.status(status).send({
+          message: err?.message || 'Update failed',
+          error: err?.response?.message || err?.message,
+          statusCode: status,
+        });
+      }
+    });
+
+    fastifyInstance.delete(`${jobMgmtBase}/organization/:organizationId/job-postings/:id`, async (request: any, reply: any) => {
+      try {
+        const { organizationId, id } = request.params;
+        await jobService.remove(organizationId, id);
+        return reply.status(204).send();
+      } catch (err: any) {
+        const status = err?.statusCode || err?.status || 500;
+        return reply.status(status).send({
+          message: err?.message || 'Delete failed',
+          error: err?.response?.message || err?.message,
+          statusCode: status,
+        });
+      }
+    });
+  } catch (e) {
+    console.warn('Job-management fallback routes not registered:', (e as Error).message);
+  }
+
   const host = process.env.HOST || '0.0.0.0';
   await app.listen(appConfigService.port, host);
   const appUrl = process.env.HHBACKEND_URL || 
     (process.env.HOST && process.env.PORT
       ? `http://${process.env.HOST === '0.0.0.0' ? 'localhost' : process.env.HOST}:${process.env.PORT}`
       : `http://localhost:${appConfigService.port}`);
-  const wsUrl = process.env.WS_PORT
-    ? `http://localhost:${process.env.WS_PORT}`
-    : `http://localhost:${wsPort}`;
+  // const wsUrl = process.env.WS_PORT
+  //   ? `http://localhost:${process.env.WS_PORT}`
+  //   : `http://localhost:${wsPort}`;
+  // console.log(`Application is running on: ${appUrl}`);
+  // console.log(`Referral WebSocket server on: ${wsUrl}/referrals`);
   console.log(`Application is running on: ${appUrl}`);
-  console.log(`Referral WebSocket server on: ${wsUrl}/referrals`);
+  console.log(`Referral WebSocket server on: ${appUrl}/referrals`);
 }
 bootstrap();
