@@ -13,10 +13,14 @@ import { BlogModule } from './models/blog/blog.module';
 import { PatientChatModule } from './models/patient-chat/patient-chat.module';
 import { AiChatModule } from './models/ai-chat/ai-chat.module';
 import { JobManagementModule } from './models/job-management/job-management.module';
+import { BlogModule } from './models/blog/blog.module';
+import { PatientChatModule } from './models/patient-chat/patient-chat.module';
+import { AiChatModule } from './models/ai-chat/ai-chat.module';
+import { JobManagementModule } from './models/job-management/job-management.module';
 import { AuditLogModule } from './common/services/audit/audit-log.module';
 import { OnboardingStatusModule } from './common/services/onboarding-status/onboarding-status.module';
-import { McpModule } from './mcp/mcp.module';
 import { AppController } from './app.controller';
+import { McpModule } from './mcp/mcp.module';
 
 @Module({
   imports: [

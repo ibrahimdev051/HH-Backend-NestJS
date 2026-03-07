@@ -13,6 +13,10 @@ import { McpHttpHandlerService } from './mcp/mcp-http-handler.service';
 import { JobManagementService } from './models/job-management/job-management.service';
 import { BlogService } from './models/blog/blog.service';
 import { SuccessHelper } from './common/helpers/responses/success.helper';
+import { JobManagementService } from './models/job-management/job-management.service';
+import { BlogService } from './models/blog/blog.service';
+import { SuccessHelper } from './common/helpers/responses/success.helper';
+import { McpHttpHandlerService } from './mcp/mcp-http-handler.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({logger: true}));
@@ -319,7 +323,7 @@ async function bootstrap() {
   // console.log(`Application is running on: ${appUrl}`);
   // console.log(`Referral WebSocket server on: ${wsUrl}/referrals`);
   console.log(`Application is running on: ${appUrl}`);
-  console.log(`Referral WebSocket server on: ${wsUrl}/referrals`);
+  console.log(`Referral WebSocket server on: ${appUrl}/referrals`);
 
   const mcpPort = appConfigService.mcpPort;
   const mcpHandler = app.get(McpHttpHandlerService);
